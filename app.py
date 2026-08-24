@@ -1,6 +1,5 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 st.set_page_config(
     page_title="VedaAI - Intellect, Engineering & Wisdom",
@@ -41,7 +40,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Model Engine:",
-        ("gemini-2.5-flash", "gemini-2.5-pro")
+        ("gemini-1.5-flash", "gemini-1.5-pro")
     )
     
     if st.button("Clear Conversation"):
@@ -74,26 +73,22 @@ if prompt := st.chat_input("Ask VedaAI an engineering, vision, or strategy probl
     with st.chat_message("user"):
         st.markdown(prompt)
         
-    # Generate response
-    client = genai.Client(api_key=api_key)
-    system_instruction = PERSONA_PROMPTS[persona]
-    
-    with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-        full_response = ""
-        try:
-            response = client.models.generate_content_stream(
-                model=model_choice,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction
-                )
-            )
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+            model_name=model_choice,
+            system_instruction=PERSONA_PROMPTS[persona]
+        )
+        
+        with st.chat_message("assistant"):
+            response_placeholder = st.empty()
+            full_response = ""
+            response = model.generate_content(prompt, stream=True)
             for chunk in response:
                 if chunk.text:
                     full_response += chunk.text
                     response_placeholder.markdown(full_response + "▌")
             response_placeholder.markdown(full_response)
             st.session_state.messages.append({"role": "assistant", "content": full_response})
-        except Exception as e:
-            st.error(f"Error: {e}")
+    except Exception as e:
+        st.error(f"Error: {e}")
