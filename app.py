@@ -1,6 +1,5 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 st.set_page_config(
     page_title="VedaAI - Intellect, Engineering & Wisdom",
@@ -24,7 +23,6 @@ st.caption("Bridging Ancient Strategy, Engineering Rigor & State-of-the-Art AI")
 with st.sidebar:
     st.header("⚙️ Core Engine Settings")
     
-    # Check secrets first, fallback to user input if not present
     api_key = st.secrets.get("GEMINI_API_KEY", "")
     if not api_key:
         api_key = st.text_input("Gemini API Key:", type="password", key="gemini_key")
@@ -41,14 +39,13 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Model Engine:",
-        ("gemini-2.5-flash", "gemini-2.5-pro")
+        ("gemini-1.5-flash", "gemini-1.5-pro")
     )
     
     if st.button("Clear Conversation"):
         st.session_state.messages = []
         st.rerun()
 
-# System Prompts Mapping
 PERSONA_PROMPTS = {
     "General Vision & Insight": "You are VedaAI, an intellectual assistant blending deep analytical clarity, high ambition, and strategic intuition.",
     "Engineering & First-Principles Solver": "You are VedaAI acting as a Lead Engineer. Break down all problems to first principles, physics, mathematics, and ruthless technical precision.",
@@ -75,19 +72,21 @@ if prompt := st.chat_input("Ask VedaAI an engineering, vision, or strategy probl
         st.markdown(prompt)
         
     try:
-        client = genai.Client(api_key=api_key)
+        # Configure client with client_options for Google AI Studio auth keys
+        genai.configure(
+            api_key=api_key.strip(),
+            client_options={"api_endpoint": "generativelanguage.googleapis.com"}
+        )
+        
+        model = genai.GenerativeModel(
+            model_name=model_choice,
+            system_instruction=PERSONA_PROMPTS[persona]
+        )
         
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
             full_response = ""
-            
-            response = client.models.generate_content_stream(
-                model=model_choice,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=PERSONA_PROMPTS[persona]
-                )
-            )
+            response = model.generate_content(prompt, stream=True)
             for chunk in response:
                 if chunk.text:
                     full_response += chunk.text
