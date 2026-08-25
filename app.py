@@ -1,5 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
 st.set_page_config(
     page_title="VedaAI - Intellect, Engineering & Wisdom",
@@ -39,7 +40,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Model Engine:",
-        ("gemini-1.5-flash", "gemini-1.5-pro")
+        ("gemini-2.5-flash", "gemini-2.5-pro")
     )
     
     if st.button("Clear Conversation"):
@@ -56,7 +57,7 @@ PERSONA_PROMPTS = {
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display previous messages
+# Display conversation history
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -72,21 +73,19 @@ if prompt := st.chat_input("Ask VedaAI an engineering, vision, or strategy probl
         st.markdown(prompt)
         
     try:
-        # Configure client with client_options for Google AI Studio auth keys
-        genai.configure(
-            api_key=api_key.strip(),
-            client_options={"api_endpoint": "generativelanguage.googleapis.com"}
-        )
-        
-        model = genai.GenerativeModel(
-            model_name=model_choice,
-            system_instruction=PERSONA_PROMPTS[persona]
-        )
+        client = genai.Client(api_key=api_key.strip())
         
         with st.chat_message("assistant"):
             response_placeholder = st.empty()
             full_response = ""
-            response = model.generate_content(prompt, stream=True)
+            
+            response = client.models.generate_content_stream(
+                model=model_choice,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=PERSONA_PROMPTS[persona]
+                )
+            )
             for chunk in response:
                 if chunk.text:
                     full_response += chunk.text
