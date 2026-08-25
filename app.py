@@ -40,7 +40,7 @@ with st.sidebar:
     
     model_choice = st.selectbox(
         "Model Engine:",
-        ("gemini-2.5-flash", "gemini-2.5-pro")
+        ("gemini-3.6-flash", "gemini-3.6-pro")
     )
     
     if st.button("Clear Conversation"):
